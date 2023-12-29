@@ -16,10 +16,7 @@ export default function Search() {
 
   const [loading, setLoading] = useState(false);
   const [listings, setListings] = useState([]);
-
-  console.log(listings);
-
-  //   console.log(sidebardata);
+  const [showMore, setShowMore] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -52,12 +49,19 @@ export default function Search() {
     }
     const fetchListings = async () => {
       setLoading(true);
+      setShowMore(false);
       const searchQuery = urlParams.toString();
       const res = await fetch(`/api/listing/get?${searchQuery}`);
       const data = await res.json();
+      if (data.length > 8) {
+        setShowMore(true);
+      } else {
+        setShowMore(false);
+      }
       setListings(data);
       setLoading(false);
     };
+
     fetchListings();
   }, [location.search]);
 
@@ -88,6 +92,7 @@ export default function Search() {
 
     if (e.target.id === "sort_order") {
       const sort = e.target.value.split("_")[0] || "created_at";
+
       const order = e.target.value.split("_")[1] || "desc";
 
       setSidebardata({ ...sidebardata, sort, order });
@@ -106,6 +111,20 @@ export default function Search() {
     urlParams.set("order", sidebardata.order);
     const searchQuery = urlParams.toString();
     navigate(`/search?${searchQuery}`);
+  };
+
+  const onShowMoreClick = async () => {
+    const numberOfListings = listings.length;
+    const startIndex = numberOfListings;
+    const urlParams = new URLSearchParams(location.search);
+    urlParams.set("startIndex", startIndex);
+    const searchQuery = urlParams.toString();
+    const res = await fetch(`/api/listing/get?${searchQuery}`);
+    const data = await res.json();
+    if (data.length < 9) {
+      setShowMore(false);
+    }
+    setListings([...listings, ...data]);
   };
 
   return (
@@ -195,9 +214,9 @@ export default function Search() {
           <div className="flex items-center gap-2">
             <label className="font-semibold">Sort:</label>
             <select
+              onChange={handleChange}
               className="border rounded-lg p-3"
               defaultValue={"created_at_desc"}
-              onChange={handleChange}
               id="sort_order"
             >
               <option value="regularPrice_desc">Price high to low</option>
@@ -229,6 +248,14 @@ export default function Search() {
             listings.map((listing) => (
               <ListingItem key={listing._id} listing={listing} />
             ))}
+          {showMore && (
+            <button
+              onClick={onShowMoreClick}
+              className="text-green-700 hover:underline p-7 text-center w-full"
+            >
+              Show More
+            </button>
+          )}
         </div>
       </div>
     </div>
